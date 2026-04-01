@@ -5,62 +5,58 @@ import { createPool, initializeSchema } from './db';
 import { runDailyCheck } from './checks';
 
 async function main(): Promise<void> {
-  const config = loadConfig();
-  const pool = createPool(config.database);
+    const config = loadConfig();
+    const pool = createPool(config.database);
 
-  await initializeSchema(pool);
+    await initializeSchema(pool);
 
-  const client = new Client({
-    intents: [
-      GatewayIntentBits.Guilds,
-      GatewayIntentBits.GuildMessages,
-      GatewayIntentBits.GuildMembers,
-    ],
-  });
+    const client = new Client({
+        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildMembers],
+    });
 
-  client.once('ready', () => {
-    if (!client.user) {
-      throw new Error('Client is ready but user is missing');
-    }
-
-    console.log(`Logged in as ${client.user.tag}`);
-
-    cron.schedule(
-      `${config.checkMinute} ${config.checkHour} * * *`,
-      async () => {
-        try {
-          const summary = await runDailyCheck({ client, pool, config });
-          console.log(
-            `Check finished for ${summary.checkDate}: eligible=${summary.eligibleCount}, posted=${summary.postedCount}, missed=${summary.missedCount}`,
-          );
-        } catch (error) {
-          console.error('Daily check failed', error);
+    client.once('ready', () => {
+        if (!client.user) {
+            throw new Error('Client is ready but user is missing');
         }
-      },
-      { timezone: config.timezone },
-    );
-  });
 
-  client.on('error', (error) => {
-    console.error('Discord client error', error);
-  });
+        console.log(`Logged in as ${client.user.tag}`);
 
-  process.on('SIGINT', async () => {
-    await client.destroy();
-    await pool.end();
-    process.exit(0);
-  });
+        cron.schedule(
+            `${config.checkMinute} ${config.checkHour} * * *`,
+            async () => {
+                try {
+                    const summary = await runDailyCheck({ client, pool, config });
+                    console.log(
+                        `Check finished for ${summary.checkDate}: eligible=${summary.eligibleCount}, posted=${summary.postedCount}, missed=${summary.missedCount}`
+                    );
+                } catch (error) {
+                    console.error('Daily check failed', error);
+                }
+            },
+            { timezone: config.timezone }
+        );
+    });
 
-  process.on('SIGTERM', async () => {
-    await client.destroy();
-    await pool.end();
-    process.exit(0);
-  });
+    client.on('error', (error) => {
+        console.error('Discord client error', error);
+    });
 
-  await client.login(config.discordToken);
+    process.on('SIGINT', async () => {
+        await client.destroy();
+        await pool.end();
+        process.exit(0);
+    });
+
+    process.on('SIGTERM', async () => {
+        await client.destroy();
+        await pool.end();
+        process.exit(0);
+    });
+
+    await client.login(config.discordToken);
 }
 
 main().catch((error) => {
-  console.error('Fatal error', error);
-  process.exit(1);
+    console.error('Fatal error', error);
+    process.exit(1);
 });
