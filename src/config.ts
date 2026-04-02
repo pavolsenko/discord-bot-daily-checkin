@@ -62,7 +62,6 @@ export function loadConfig(): AppConfig {
         checkHour: 9,
         checkMinute: 0,
         excludedRoleIds: splitCsvIds(env.EXCLUDED_ROLE_IDS),
-        reportChannelId: env.REPORT_CHANNEL_ID?.trim() || undefined,
         database: {
             host: env.MYSQL_HOST,
             port: env.MYSQL_PORT,

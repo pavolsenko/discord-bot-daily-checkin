@@ -30,7 +30,10 @@ function formatDateInTimeZone(date: Date, timeZone: string): string {
     return `${year}-${month}-${day}`;
 }
 
-function isEligibleMember(member: GuildMember, excludedRoleIds: string[]): boolean {
+function isEligibleMember(
+    member: GuildMember,
+    excludedRoleIds: string[]
+): boolean {
     if (member.user.bot) {
         return false;
     }
@@ -42,18 +45,26 @@ function isEligibleMember(member: GuildMember, excludedRoleIds: string[]): boole
     return !excludedRoleIds.some((roleId) => member.roles.cache.has(roleId));
 }
 
-async function fetchPostedUserIds(channel: TextBasedChannel, sinceTimestamp: number): Promise<Set<string>> {
+async function fetchPostedUserIds(
+    channel: TextBasedChannel,
+    sinceTimestamp: number
+): Promise<Set<string>> {
     const postedUserIds = new Set<string>();
     let before: string | undefined;
 
     while (true) {
-        const batch = await channel.messages.fetch({ limit: 100, ...(before ? { before } : {}) });
+        const batch = await channel.messages.fetch({
+            limit: 100,
+            ...(before ? { before } : {}),
+        });
 
         if (batch.size === 0) {
             break;
         }
 
-        const messages = [...batch.values()].sort((a, b) => b.createdTimestamp - a.createdTimestamp);
+        const messages = [...batch.values()].sort(
+            (a, b) => b.createdTimestamp - a.createdTimestamp
+        );
 
         for (const message of messages) {
             if (message.createdTimestamp < sinceTimestamp) {
@@ -117,7 +128,9 @@ export async function runDailyCheck(options: {
 
     const textChannel = channel as TextBasedChannel;
     const members = await guild.members.fetch();
-    const eligibleMembers = members.filter((member) => isEligibleMember(member, config.excludedRoleIds));
+    const eligibleMembers = members.filter((member) =>
+        isEligibleMember(member, config.excludedRoleIds)
+    );
 
     const sinceTimestamp = Date.now() - 24 * 60 * 60 * 1000;
     const postedUserIds = await fetchPostedUserIds(textChannel, sinceTimestamp);
@@ -133,12 +146,22 @@ export async function runDailyCheck(options: {
             missedUserIds.push(member.id);
 
             if (!hasBadge) {
-                await member.roles.add(config.badgeRoleId, 'Missed the daily check');
+                await member.roles.add(
+                    config.badgeRoleId,
+                    'Missed the daily check'
+                );
             }
 
-            await incrementMissCount({ pool, guildId: config.guildId, userId: member.id });
+            await incrementMissCount({
+                pool,
+                guildId: config.guildId,
+                userId: member.id,
+            });
         } else if (hasBadge) {
-            await member.roles.remove(config.badgeRoleId, 'Posted in the target channel');
+            await member.roles.remove(
+                config.badgeRoleId,
+                'Posted in the target channel'
+            );
         }
 
         await upsertDailyResult({
@@ -154,15 +177,13 @@ export async function runDailyCheck(options: {
 
     const summary: DailyCheckSummary = {
         checkDate,
-        eligibleCount: eligibleMembers.size,
-        postedCount: eligibleMembers.size - missedUserIds.length,
+        eligibleCount: members.size,
+        postedCount: members.size - missedUserIds.length,
         missedCount: missedUserIds.length,
         missedUserIds,
     };
 
-    if (config.reportChannelId) {
-        await sendSummaryMessage({ client, channelId: config.reportChannelId, summary });
-    }
+    await sendSummaryMessage({ client, channelId: config.channelId, summary });
 
     return summary;
 }
