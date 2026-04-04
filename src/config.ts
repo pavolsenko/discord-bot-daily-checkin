@@ -20,7 +20,7 @@ const envSchema = z.object({
     TIMEZONE: z.string().min(1).default('Europe/Vienna'),
     CHECK_HOUR: z.coerce.number().int().min(0).max(23).default(9),
     CHECK_MINUTE: z.coerce.number().int().min(0).max(59).default(0),
-    EXCLUDED_ROLE_IDS: z.string().optional(),
+    INCLUDED_USER_IDS: z.string().optional(),
     REPORT_CHANNEL_ID: z.string().optional(),
     MYSQL_HOST: z.string().min(1),
     MYSQL_PORT: z.coerce.number().int().min(1).max(65535).default(3306),
@@ -30,7 +30,16 @@ const envSchema = z.object({
     MYSQL_CONNECTION_LIMIT: z.coerce.number().int().min(1).max(100).default(10),
 });
 
-export type AppConfig = {
+export interface DatabaseConfig {
+    host: string;
+    port: number;
+    user: string;
+    password: string;
+    database: string;
+    connectionLimit: number;
+}
+
+export interface AppConfig {
     discordToken: string;
     guildId: string;
     channelId: string;
@@ -38,17 +47,10 @@ export type AppConfig = {
     timezone: string;
     checkHour: number;
     checkMinute: number;
-    excludedRoleIds: string[];
+    includedUserIds: string[];
     reportChannelId?: string;
-    database: {
-        host: string;
-        port: number;
-        user: string;
-        password: string;
-        database: string;
-        connectionLimit: number;
-    };
-};
+    database: DatabaseConfig;
+}
 
 export function loadConfig(): AppConfig {
     const env = envSchema.parse(process.env);
@@ -61,7 +63,7 @@ export function loadConfig(): AppConfig {
         timezone: 'Europe/Vienna',
         checkHour: 9,
         checkMinute: 0,
-        excludedRoleIds: splitCsvIds(env.EXCLUDED_ROLE_IDS),
+        includedUserIds: splitCsvIds(env.INCLUDED_USER_IDS),
         database: {
             host: env.MYSQL_HOST,
             port: env.MYSQL_PORT,

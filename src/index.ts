@@ -1,18 +1,23 @@
 import { Client, GatewayIntentBits } from 'discord.js';
 import cron from 'node-cron';
+
 import { loadConfig } from './config';
-import { createPool, initializeSchema } from './db';
+import { createPool } from './db';
 import { runDailyCheck } from './checks';
 
 async function main(): Promise<void> {
     const config = loadConfig();
     const pool = createPool(config.database);
 
-    await initializeSchema(pool);
-
     const client = new Client({
-        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildMembers],
+        intents: [
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.GuildMembers,
+        ],
     });
+
+    await client.login(config.discordToken);
 
     client.once('ready', () => {
         if (!client.user) {
@@ -25,7 +30,7 @@ async function main(): Promise<void> {
             `${config.checkMinute} ${config.checkHour} * * *`,
             async () => {
                 try {
-                    const summary = await runDailyCheck({ client, pool, config });
+                    const summary = await runDailyCheck(client, pool, config);
                     console.log(
                         `Check finished for ${summary.checkDate}: eligible=${summary.eligibleCount}, posted=${summary.postedCount}, missed=${summary.missedCount}`
                     );
@@ -52,8 +57,6 @@ async function main(): Promise<void> {
         await pool.end();
         process.exit(0);
     });
-
-    await client.login(config.discordToken);
 }
 
 main().catch((error) => {

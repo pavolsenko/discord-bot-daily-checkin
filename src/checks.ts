@@ -1,7 +1,8 @@
 import { Client, GuildMember, TextBasedChannel, TextChannel } from 'discord.js';
 import type { Pool } from 'mysql2/promise';
+
 import type { AppConfig } from './config';
-import { incrementMissCount, upsertDailyResult } from './db';
+import { incrementMissCount, updateDailyResult } from './db';
 
 export type DailyCheckSummary = {
     checkDate: string;
@@ -32,17 +33,17 @@ function formatDateInTimeZone(date: Date, timeZone: string): string {
 
 function isEligibleMember(
     member: GuildMember,
-    excludedRoleIds: string[]
+    includedRoleIds: string[]
 ): boolean {
     if (member.user.bot) {
         return false;
     }
 
-    if (excludedRoleIds.length === 0) {
+    if (includedRoleIds.length === 0) {
         return true;
     }
 
-    return !excludedRoleIds.some((roleId) => member.roles.cache.has(roleId));
+    return includedRoleIds.some((roleId) => member.roles.cache.has(roleId));
 }
 
 async function fetchPostedUserIds(
@@ -89,12 +90,11 @@ async function fetchPostedUserIds(
     return postedUserIds;
 }
 
-async function sendSummaryMessage(options: {
-    client: Client;
-    channelId: string;
-    summary: DailyCheckSummary;
-}): Promise<void> {
-    const { client, channelId, summary } = options;
+async function sendSummaryMessage(
+    client: Client,
+    channelId: string,
+    summary: DailyCheckSummary
+): Promise<void> {
     const channel = await client.channels.fetch(channelId);
 
     if (!channel || !channel.isTextBased()) {
@@ -112,13 +112,11 @@ async function sendSummaryMessage(options: {
     });
 }
 
-export async function runDailyCheck(options: {
-    client: Client;
-    pool: Pool;
-    config: AppConfig;
-}): Promise<DailyCheckSummary> {
-    const { client, pool, config } = options;
-
+export async function runDailyCheck(
+    client: Client,
+    pool: Pool,
+    config: AppConfig
+): Promise<DailyCheckSummary> {
     const guild = await client.guilds.fetch(config.guildId);
     const channel = await guild.channels.fetch(config.channelId);
 
@@ -129,12 +127,16 @@ export async function runDailyCheck(options: {
     const textChannel = channel as TextBasedChannel;
     const members = await guild.members.fetch();
     const eligibleMembers = members.filter((member) =>
-        isEligibleMember(member, config.excludedRoleIds)
+        isEligibleMember(member, config.includedUserIds)
     );
 
-    const sinceTimestamp = Date.now() - 24 * 60 * 60 * 1000;
+    const sinceTimestamp =
+        Date.now() - Math.floor(config.checkHour / 2) * 60 * 60 * 1000;
     const postedUserIds = await fetchPostedUserIds(textChannel, sinceTimestamp);
     const checkDate = formatDateInTimeZone(new Date(), config.timezone);
+
+    console.log('CHECK SINCE', new Date(sinceTimestamp).toString());
+    console.log('ELIGIBLE MEMBERS', eligibleMembers.values());
 
     const missedUserIds: string[] = [];
 
@@ -164,7 +166,7 @@ export async function runDailyCheck(options: {
             );
         }
 
-        await upsertDailyResult({
+        await updateDailyResult({
             pool,
             guildId: config.guildId,
             channelId: config.channelId,
@@ -183,7 +185,7 @@ export async function runDailyCheck(options: {
         missedUserIds,
     };
 
-    await sendSummaryMessage({ client, channelId: config.channelId, summary });
+    await sendSummaryMessage(client, config.channelId, summary);
 
     return summary;
 }

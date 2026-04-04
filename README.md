@@ -65,8 +65,4 @@ npm run check:now
 
 The app creates its tables automatically on startup.
 
-## Behavior
-
-This project treats every non-bot member in the guild as eligible, except members who have one of the role IDs listed in `EXCLUDED_ROLE_IDS`.
-
-If you want a whitelist model instead, that is easy to switch by using a required-role list instead of the current exclusion list.
+https://discord.com/oauth2/authorize?client_id=1488582014004236380&permissions=268504064&integration_type=0&scope=applications.commands+bot

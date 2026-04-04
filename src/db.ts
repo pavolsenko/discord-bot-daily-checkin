@@ -1,7 +1,8 @@
 import mysql, { Pool } from 'mysql2/promise';
-import type { AppConfig } from './config';
 
-export function createPool(config: AppConfig['database']): Pool {
+import type { DatabaseConfig } from './config';
+
+export function createPool(config: DatabaseConfig): Pool {
     return mysql.createPool({
         host: config.host,
         port: config.port,
@@ -14,32 +15,7 @@ export function createPool(config: AppConfig['database']): Pool {
     });
 }
 
-export async function initializeSchema(pool: Pool): Promise<void> {
-    await pool.execute(`
-    CREATE TABLE IF NOT EXISTS daily_check_results (
-      guild_id VARCHAR(32) NOT NULL,
-      channel_id VARCHAR(32) NOT NULL,
-      user_id VARCHAR(32) NOT NULL,
-      check_date DATE NOT NULL,
-      posted TINYINT(1) NOT NULL,
-      badge_awarded TINYINT(1) NOT NULL DEFAULT 0,
-      checked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (guild_id, channel_id, user_id, check_date)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-  `);
-
-    await pool.execute(`
-    CREATE TABLE IF NOT EXISTS user_badge_stats (
-      guild_id VARCHAR(32) NOT NULL,
-      user_id VARCHAR(32) NOT NULL,
-      missed_count INT NOT NULL DEFAULT 0,
-      last_missed_at TIMESTAMP NULL DEFAULT NULL,
-      PRIMARY KEY (guild_id, user_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-  `);
-}
-
-export async function upsertDailyResult(options: {
+interface UpdateOptions {
     pool: Pool;
     guildId: string;
     channelId: string;
@@ -47,10 +23,10 @@ export async function upsertDailyResult(options: {
     checkDate: string;
     posted: boolean;
     badgeAwarded: boolean;
-}): Promise<void> {
-    const { pool, guildId, channelId, userId, checkDate, posted, badgeAwarded } = options;
+}
 
-    await pool.execute(
+export async function updateDailyResult(options: UpdateOptions): Promise<void> {
+    await options.pool.execute(
         `
     INSERT INTO daily_check_results (
       guild_id,
@@ -65,14 +41,27 @@ export async function upsertDailyResult(options: {
       badge_awarded = VALUES(badge_awarded),
       checked_at = CURRENT_TIMESTAMP;
     `,
-        [guildId, channelId, userId, checkDate, posted ? 1 : 0, badgeAwarded ? 1 : 0]
+        [
+            options.guildId,
+            options.channelId,
+            options.userId,
+            options.checkDate,
+            options.posted ? 1 : 0,
+            options.badgeAwarded ? 1 : 0,
+        ]
     );
 }
 
-export async function incrementMissCount(options: { pool: Pool; guildId: string; userId: string }): Promise<void> {
-    const { pool, guildId, userId } = options;
+interface IncrementOptions {
+    pool: Pool;
+    guildId: string;
+    userId: string;
+}
 
-    await pool.execute(
+export async function incrementMissCount(
+    options: IncrementOptions
+): Promise<void> {
+    await options.pool.execute(
         `
     INSERT INTO user_badge_stats (
       guild_id,
@@ -84,6 +73,6 @@ export async function incrementMissCount(options: { pool: Pool; guildId: string;
       missed_count = missed_count + 1,
       last_missed_at = CURRENT_TIMESTAMP;
     `,
-        [guildId, userId]
+        [options.guildId, options.userId]
     );
 }
