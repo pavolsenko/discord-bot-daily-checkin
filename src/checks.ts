@@ -1,16 +1,16 @@
-import { Client, GuildMember, TextBasedChannel, TextChannel } from 'discord.js';
+import {
+    Channel,
+    Client,
+    Collection,
+    Guild,
+    GuildMember,
+    Message,
+} from 'discord.js';
 import type { Pool } from 'mysql2/promise';
 
 import type { AppConfig } from './config';
-import { incrementMissCount, updateDailyResult } from './db';
-
-export type DailyCheckSummary = {
-    checkDate: string;
-    eligibleCount: number;
-    postedCount: number;
-    missedCount: number;
-    missedUserIds: string[];
-};
+import { getDailyCount, incrementMissCount, updateDailyResult } from './db';
+import { sendStatusMessage } from './message';
 
 function formatDateInTimeZone(date: Date, timeZone: string): string {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -31,40 +31,32 @@ function formatDateInTimeZone(date: Date, timeZone: string): string {
     return `${year}-${month}-${day}`;
 }
 
-function isEligibleMember(
-    member: GuildMember,
-    includedRoleIds: string[]
-): boolean {
-    if (member.user.bot) {
-        return false;
-    }
-
-    if (includedRoleIds.length === 0) {
-        return true;
-    }
-
-    return includedRoleIds.some((roleId) => member.roles.cache.has(roleId));
-}
-
 async function fetchPostedUserIds(
-    channel: TextBasedChannel,
+    channel: Channel | null,
     sinceTimestamp: number
 ): Promise<Set<string>> {
+    if (!channel || !channel.isTextBased()) {
+        throw new Error('Configured channel is not a text-based guild channel');
+    }
+
     const postedUserIds = new Set<string>();
     let before: string | undefined;
 
     while (true) {
-        const batch = await channel.messages.fetch({
-            limit: 100,
-            ...(before ? { before } : {}),
-        });
+        const batch: Collection<string, Message> = await channel.messages.fetch(
+            {
+                limit: 100,
+                ...(before ? { before } : {}),
+            }
+        );
 
         if (batch.size === 0) {
             break;
         }
 
-        const messages = [...batch.values()].sort(
-            (a, b) => b.createdTimestamp - a.createdTimestamp
+        const messages: Message[] = [...batch.values()].sort(
+            (a: Message, b: Message): number =>
+                b.createdTimestamp - a.createdTimestamp
         );
 
         for (const message of messages) {
@@ -90,53 +82,27 @@ async function fetchPostedUserIds(
     return postedUserIds;
 }
 
-async function sendSummaryMessage(
-    client: Client,
-    channelId: string,
-    summary: DailyCheckSummary
-): Promise<void> {
-    const channel = await client.channels.fetch(channelId);
-
-    if (!channel || !channel.isTextBased()) {
-        return;
-    }
-
-    await (channel as TextChannel).send({
-        content: [
-            `Daily check ${summary.checkDate}`,
-            `Eligible: ${summary.eligibleCount}`,
-            `Posted: ${summary.postedCount}`,
-            `Missed: ${summary.missedCount}`,
-        ].join(' | '),
-        allowedMentions: { parse: [] },
-    });
-}
-
 export async function runDailyCheck(
     client: Client,
     pool: Pool,
     config: AppConfig
-): Promise<DailyCheckSummary> {
-    const guild = await client.guilds.fetch(config.guildId);
-    const channel = await guild.channels.fetch(config.channelId);
+): Promise<void> {
+    const guild: Guild = await client.guilds.fetch(config.guildId);
+    const channel: Channel | null = await guild.channels.fetch(
+        config.channelId
+    );
 
-    if (!channel || !channel.isTextBased()) {
-        throw new Error('Configured channel is not a text-based guild channel');
-    }
-
-    const textChannel = channel as TextBasedChannel;
-    const members = await guild.members.fetch();
-    const eligibleMembers = members.filter((member) =>
-        isEligibleMember(member, config.includedUserIds)
+    const members: Collection<string, GuildMember> =
+        await guild.members.fetch();
+    const eligibleMembers: Collection<string, GuildMember> = members.filter(
+        (member: GuildMember): boolean =>
+            config.includedUserIds.some((id: string) => member.user.id === id)
     );
 
     const sinceTimestamp =
         Date.now() - Math.floor(config.checkHour / 2) * 60 * 60 * 1000;
-    const postedUserIds = await fetchPostedUserIds(textChannel, sinceTimestamp);
+    const postedUserIds = await fetchPostedUserIds(channel, sinceTimestamp);
     const checkDate = formatDateInTimeZone(new Date(), config.timezone);
-
-    console.log('CHECK SINCE', new Date(sinceTimestamp).toString());
-    console.log('ELIGIBLE MEMBERS', eligibleMembers.values());
 
     const missedUserIds: string[] = [];
 
@@ -175,17 +141,9 @@ export async function runDailyCheck(
             posted,
             badgeAwarded: !posted,
         });
+
+        const leaderboard = await getDailyCount(pool);
+
+        await sendStatusMessage(channel, missedUserIds, leaderboard[0]);
     }
-
-    const summary: DailyCheckSummary = {
-        checkDate,
-        eligibleCount: members.size,
-        postedCount: members.size - missedUserIds.length,
-        missedCount: missedUserIds.length,
-        missedUserIds,
-    };
-
-    await sendSummaryMessage(client, config.channelId, summary);
-
-    return summary;
 }

@@ -19,6 +19,9 @@ async function main(): Promise<void> {
     await client.login(config.discordToken);
 
     await runDailyCheck(client, pool, config);
+
+    await pool.end();
+    await client.destroy();
 }
 
 main().catch((error) => {

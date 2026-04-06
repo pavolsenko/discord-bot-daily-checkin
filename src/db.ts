@@ -1,4 +1,4 @@
-import mysql, { Pool } from 'mysql2/promise';
+import mysql, { FieldPacket, Pool, RowDataPacket } from 'mysql2/promise';
 
 import type { DatabaseConfig } from './config';
 
@@ -74,5 +74,22 @@ export async function incrementMissCount(
       last_missed_at = CURRENT_TIMESTAMP;
     `,
         [options.guildId, options.userId]
+    );
+}
+
+export interface DailyCountRow extends RowDataPacket {
+    user_id: string;
+    missed_count: number;
+}
+
+export async function getDailyCount(
+    pool: Pool
+): Promise<[DailyCountRow[], FieldPacket[]]> {
+    return await pool.execute<DailyCountRow[]>(
+        `
+            SELECT user_id, missed_count
+            FROM user_badge_stats
+            ORDER BY missed_count DESC;
+        `
     );
 }

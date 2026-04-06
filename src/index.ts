@@ -30,10 +30,7 @@ async function main(): Promise<void> {
             `${config.checkMinute} ${config.checkHour} * * *`,
             async () => {
                 try {
-                    const summary = await runDailyCheck(client, pool, config);
-                    console.log(
-                        `Check finished for ${summary.checkDate}: eligible=${summary.eligibleCount}, posted=${summary.postedCount}, missed=${summary.missedCount}`
-                    );
+                    await runDailyCheck(client, pool, config);
                 } catch (error) {
                     console.error('Daily check failed', error);
                 }
