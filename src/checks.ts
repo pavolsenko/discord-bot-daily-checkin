@@ -99,8 +99,7 @@ export async function runDailyCheck(
             config.includedUserIds.some((id: string) => member.user.id === id)
     );
 
-    const sinceTimestamp =
-        Date.now() - Math.floor(config.checkHour / 2) * 60 * 60 * 1000;
+    const sinceTimestamp = Date.now() - 4 * 60 * 60 * 1000;
     const postedUserIds = await fetchPostedUserIds(channel, sinceTimestamp);
     const checkDate = formatDateInTimeZone(new Date(), config.timezone);
 
