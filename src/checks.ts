@@ -140,9 +140,8 @@ export async function runDailyCheck(
             posted,
             badgeAwarded: !posted,
         });
-
-        const leaderboard = await getDailyCount(pool);
-
-        await sendStatusMessage(channel, missedUserIds, leaderboard[0]);
     }
+
+    const leaderboard = await getDailyCount(pool);
+    await sendStatusMessage(channel, missedUserIds, leaderboard[0]);
 }
