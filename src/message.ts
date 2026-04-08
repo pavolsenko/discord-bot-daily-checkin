@@ -1,12 +1,27 @@
 import { Channel, GuildTextBasedChannel } from 'discord.js';
 import { DailyCountRow } from './db';
 
+export function getRandomGreeting() {
+    const greetings = [
+        'Dobré ráno, čuráci!!!',
+        'Dobré rejnou.',
+        'Ránečko ospalci.',
+        'Vstávať a cvičiť!',
+        'Dobré ráno.',
+        'Ránečko, lenivci!',
+    ];
+
+    return greetings[Math.floor(Math.random() * greetings.length)];
+}
+
 export function createLeaderboard(members: DailyCountRow[]): string {
     let message = '';
 
-    members.forEach((member) => {
+    const medals = ['🥇', '🥈', '🥉'];
+
+    members.slice(0, 3).forEach((member: DailyCountRow, index: number) => {
         message +=
-            `<@${member.user_id}> ` +
+            `${index in medals ? medals[index] : ' '} <@${member.user_id}> ` +
             Array(member.missed_count).fill('⏰').join(' ') +
             '\n';
     });
@@ -30,12 +45,12 @@ export async function sendStatusMessage(
     }
 
     const missedMembers: string = missedUserIds
-        .map((id: string) => `<@${id}>`)
+        .map((id: string): string => `<@${id}>`)
         .join(', ');
 
     await (channel as GuildTextBasedChannel).send({
         content:
-            `**⏰ Dobré ráno, čuráci!!! Je ${new Date().toLocaleString()}** ⏰\n` +
+            `**⏰ ${getRandomGreeting()} Je <t:${Math.ceil(Date.now() / 1000)}:F>** ⏰\n` +
             `Dnešní budikári (${missedSize}): ${missedMembers || '--'}\n\n` +
             'Leaderboard: \n' +
             createLeaderboard(leaderboard),
