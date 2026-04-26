@@ -1,17 +1,6 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
-function splitCsvIds(input: string | undefined): string[] {
-    if (!input) {
-        return [];
-    }
-
-    return input
-        .split(',')
-        .map((value) => value.trim())
-        .filter((value) => value.length > 0);
-}
-
 const envSchema = z.object({
     DISCORD_TOKEN: z.string().min(1),
     GUILD_ID: z.string().min(1),
@@ -20,7 +9,6 @@ const envSchema = z.object({
     TIMEZONE: z.string().min(1).default('Europe/Vienna'),
     CHECK_HOUR: z.coerce.number().int().min(0).max(23).default(9),
     CHECK_MINUTE: z.coerce.number().int().min(0).max(59).default(0),
-    INCLUDED_USER_IDS: z.string().optional(),
     REPORT_CHANNEL_ID: z.string().optional(),
     MYSQL_HOST: z.string().min(1),
     MYSQL_PORT: z.coerce.number().int().min(1).max(65535).default(3306),
@@ -47,7 +35,6 @@ export interface AppConfig {
     timezone: string;
     checkHour: number;
     checkMinute: number;
-    includedUserIds: string[];
     reportChannelId?: string;
     database: DatabaseConfig;
 }
@@ -63,7 +50,6 @@ export function loadConfig(): AppConfig {
         timezone: 'Europe/Vienna',
         checkHour: 9,
         checkMinute: 0,
-        includedUserIds: splitCsvIds(env.INCLUDED_USER_IDS),
         database: {
             host: env.MYSQL_HOST,
             port: env.MYSQL_PORT,

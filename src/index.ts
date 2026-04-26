@@ -4,6 +4,7 @@ import cron from 'node-cron';
 import { loadConfig } from './config';
 import { createPool } from './db';
 import { runDailyCheck } from './checks';
+import { handleRankoCommand } from './commands';
 
 async function main(): Promise<void> {
     const config = loadConfig();
@@ -41,6 +42,16 @@ async function main(): Promise<void> {
 
     client.on('error', (error) => {
         console.error('Discord client error', error);
+    });
+
+    client.on('interactionCreate', async (interaction) => {
+        if (!interaction.isChatInputCommand()) {
+            return;
+        }
+
+        if (interaction.commandName === 'ranko') {
+            await handleRankoCommand(interaction, pool, config.guildId);
+        }
     });
 
     process.on('SIGINT', async () => {

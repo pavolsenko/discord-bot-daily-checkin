@@ -9,7 +9,14 @@ import {
 import type { Pool } from 'mysql2/promise';
 
 import type { AppConfig } from './config';
-import { getDailyCount, incrementMissCount, updateDailyResult } from './db';
+import {
+    getDailyCount,
+    incrementMissCount,
+    updateDailyResult,
+    getActiveEligibleUsers,
+    getRandomInactiveUser,
+    getUserStats,
+} from './db';
 import { sendStatusMessage } from './message';
 
 function formatDateInTimeZone(date: Date, timeZone: string): string {
@@ -94,10 +101,17 @@ export async function runDailyCheck(
 
     const members: Collection<string, GuildMember> =
         await guild.members.fetch();
-    const eligibleMembers: Collection<string, GuildMember> = members.filter(
-        (member: GuildMember): boolean =>
-            config.includedUserIds.some((id: string) => member.user.id === id)
-    );
+
+    const eligibleUsers = await getActiveEligibleUsers(pool);
+
+    const eligibleMembers: Collection<string, GuildMember> = new Collection();
+
+    for (const row of eligibleUsers) {
+        const member = members.get(row.user_id);
+        if (member) {
+            eligibleMembers.set(member.id, member);
+        }
+    }
 
     const sinceTimestamp = Date.now() - 4 * 60 * 60 * 1000;
     const postedUserIds = await fetchPostedUserIds(channel, sinceTimestamp);
@@ -113,10 +127,7 @@ export async function runDailyCheck(
             missedUserIds.push(member.id);
 
             if (!hasBadge) {
-                await member.roles.add(
-                    config.badgeRoleId,
-                    'Missed the daily check'
-                );
+                await member.roles.add(config.badgeRoleId);
             }
 
             await incrementMissCount({
@@ -125,10 +136,7 @@ export async function runDailyCheck(
                 userId: member.id,
             });
         } else if (hasBadge) {
-            await member.roles.remove(
-                config.badgeRoleId,
-                'Posted in the target channel'
-            );
+            await member.roles.remove(config.badgeRoleId);
         }
 
         await updateDailyResult({
@@ -142,6 +150,24 @@ export async function runDailyCheck(
         });
     }
 
-    const leaderboard = await getDailyCount(pool);
-    await sendStatusMessage(channel, missedUserIds, leaderboard[0]);
+    const leaderboardResult = await getDailyCount(pool);
+    const leaderboard = leaderboardResult[0];
+    const honorableUserId = await getRandomInactiveUser(pool);
+
+    let honorableStats: { userId: string; missedCount: number } | null = null;
+
+    if (honorableUserId) {
+        const stats = await getUserStats(pool, honorableUserId);
+
+        honorableStats = {
+            userId: honorableUserId,
+            missedCount: stats ? stats.missed_count : 0,
+        };
+    }
+    await sendStatusMessage(
+        channel,
+        missedUserIds,
+        leaderboard,
+        honorableStats
+    );
 }

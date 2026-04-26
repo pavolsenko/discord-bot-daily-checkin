@@ -1,8 +1,8 @@
 import { Channel, GuildTextBasedChannel } from 'discord.js';
 import { DailyCountRow } from './db';
 
-export function getRandomGreeting() {
-    const greetings = [
+export function getRandomGreeting(): string {
+    const greetings: string[] = [
         'Dobré ráno, čuráci!!!',
         'Dobré rejnou.',
         'Ránečko ospalci.',
@@ -17,14 +17,16 @@ export function getRandomGreeting() {
 export function createLeaderboard(members: DailyCountRow[]): string {
     let message = '';
 
-    const medals = ['🥇', '🥈', '🥉'];
+    const medals: string[] = ['🥇', '🥈', '🥉'];
 
-    members.slice(0, 3).forEach((member: DailyCountRow, index: number) => {
-        message +=
-            `${index in medals ? medals[index] : ' '} <@${member.user_id}> ` +
-            Array(member.missed_count).fill('⏰').join(' ') +
-            '\n';
-    });
+    members
+        .slice(0, 3)
+        .forEach((member: DailyCountRow, index: number): void => {
+            message +=
+                `${index in medals ? medals[index] : ' '} <@${member.user_id}> ` +
+                Array(member.missed_count).fill('⏰').join(' ') +
+                '\n';
+        });
 
     return message;
 }
@@ -32,12 +34,15 @@ export function createLeaderboard(members: DailyCountRow[]): string {
 export async function sendStatusMessage(
     channel: Channel | null,
     missedUserIds: string[],
-    leaderboard: DailyCountRow[]
+    leaderboard: DailyCountRow[],
+    honorableStats: { userId: string; missedCount: number } | null
 ): Promise<void> {
     if (!channel || !channel.isTextBased()) {
         throw new Error('Configured channel is not a text-based guild channel');
     }
+
     let missedSize: string = missedUserIds.length + ' kusov';
+
     if (missedUserIds.length === 1) {
         missedSize = '1 kus';
     } else if (missedUserIds.length > 1 && missedUserIds.length < 5) {
@@ -48,11 +53,22 @@ export async function sendStatusMessage(
         .map((id: string): string => `<@${id}>`)
         .join(', ');
 
+    const honorableMention: string = honorableStats
+        ? `\nHonorable mention: <@${honorableStats.userId}> ` +
+          honorableStats.missedCount +
+          ' ⏰'
+        : '\nHonorable mention: --';
+
     await (channel as GuildTextBasedChannel).send({
         content:
-            `**⏰ ${getRandomGreeting()} Je <t:${Math.ceil(Date.now() / 1000)}:F>** ⏰\n` +
+            `**⏰ ${getRandomGreeting()} Je <t:${Math.ceil(
+                Date.now() / 1000
+            )}:F>** ⏰\n` +
             `Dnešní budikári (${missedSize}): ${missedMembers || '--'}\n\n` +
-            'Leaderboard: \n' +
-            createLeaderboard(leaderboard),
+            'Current leaderboard: \n' +
+            createLeaderboard(leaderboard) +
+            honorableMention +
+            '\n\n' +
+            'Ranko bot v1.2, kommandy: `/ranko join` `/ranko leave`',
     });
 }

@@ -87,9 +87,116 @@ export async function getDailyCount(
 ): Promise<[DailyCountRow[], FieldPacket[]]> {
     return await pool.execute<DailyCountRow[]>(
         `
-            SELECT user_id, missed_count
-            FROM user_badge_stats
-            ORDER BY missed_count DESC;
+            SELECT ubs.user_id, ubs.missed_count
+            FROM user_badge_stats ubs
+                INNER JOIN eligible_users eu
+                    ON eu.user_id = ubs.user_id
+                    AND eu.guild_id = ubs.guild_id
+            WHERE eu.status = 1
+            ORDER BY ubs.missed_count DESC;
         `
     );
+}
+
+export interface EligibleUserRow extends RowDataPacket {
+    user_id: string;
+    status: number;
+}
+
+export async function getActiveEligibleUsers(
+    pool: Pool
+): Promise<EligibleUserRow[]> {
+    const [rows] = await pool.execute<EligibleUserRow[]>(
+        `
+            SELECT user_id, status
+            FROM eligible_users
+            WHERE status = 1;
+        `
+    );
+
+    return rows;
+}
+
+export async function upsertEligibleUser(
+    pool: Pool,
+    guildId: string,
+    userId: string
+): Promise<void> {
+    await pool.execute(
+        `
+            INSERT INTO eligible_users (
+                guild_id,
+                user_id,
+                status
+            ) VALUES (?, ?, 1)
+                ON DUPLICATE KEY UPDATE
+                     status = 1,
+                     updated_at = CURRENT_TIMESTAMP;
+        `,
+        [guildId, userId]
+    );
+}
+
+export async function disableEligibleUser(
+    pool: Pool,
+    userId: string
+): Promise<void> {
+    await pool.execute(
+        `
+            UPDATE eligible_users
+            SET status = 0,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ?;
+        `,
+        [userId]
+    );
+}
+
+export interface RandomInactiveUserRow extends RowDataPacket {
+    user_id: string;
+}
+
+export async function getRandomInactiveUser(
+    pool: Pool
+): Promise<string | null> {
+    const [rows] = await pool.execute<RandomInactiveUserRow[]>(
+        `
+            SELECT user_id
+            FROM eligible_users
+            WHERE status = 0
+            ORDER BY RAND()
+                LIMIT 1;
+        `
+    );
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return rows[0].user_id;
+}
+
+export interface UserStatsRow extends RowDataPacket {
+    user_id: string;
+    missed_count: number;
+}
+
+export async function getUserStats(
+    pool: Pool,
+    userId: string
+): Promise<UserStatsRow | null> {
+    const [rows] = await pool.execute<UserStatsRow[]>(
+        `
+        SELECT user_id, missed_count
+        FROM user_badge_stats
+        WHERE user_id = ?;
+        `,
+        [userId]
+    );
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return rows[0];
 }
