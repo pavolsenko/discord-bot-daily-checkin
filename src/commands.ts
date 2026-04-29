@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import type { Pool } from 'mysql2/promise';
 
-import { upsertEligibleUser, disableEligibleUser } from './db';
+import { upsertEligibleUser, disableEligibleUser, logCommand } from './db';
 
 export const rankoCommand = new SlashCommandBuilder()
     .setName('ranko')
@@ -23,6 +23,14 @@ export async function handleRankoCommand(
     }
 
     const subcommand: string = interaction.options.getSubcommand();
+
+    await logCommand({
+        pool,
+        guildId,
+        userId: interaction.user.id,
+        commandName: interaction.commandName,
+        subcommandName: subcommand,
+    });
 
     if (subcommand === 'join') {
         await upsertEligibleUser(pool, guildId, interaction.user.id);

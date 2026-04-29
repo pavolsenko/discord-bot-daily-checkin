@@ -200,3 +200,30 @@ export async function getUserStats(
 
     return rows[0];
 }
+
+interface LogCommandOptions {
+    pool: Pool;
+    guildId: string;
+    userId: string;
+    commandName: string;
+    subcommandName: string | null;
+}
+
+export async function logCommand(options: LogCommandOptions): Promise<void> {
+    await options.pool.execute(
+        `
+        INSERT INTO command_logs (
+            guild_id,
+            user_id,
+            command_name,
+            subcommand_name
+        ) VALUES (?, ?, ?, ?);
+        `,
+        [
+            options.guildId,
+            options.userId,
+            options.commandName,
+            options.subcommandName,
+        ]
+    );
+}
