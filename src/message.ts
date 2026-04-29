@@ -69,6 +69,6 @@ export async function sendStatusMessage(
             createLeaderboard(leaderboard) +
             honorableMention +
             '\n\n' +
-            'Ranko bot v1.2, kommandy: `/ranko join` `/ranko leave`',
+            'Ranko bot v1.2.1, kommandy: `/ranko join` `/ranko leave`',
     });
 }
