@@ -61,8 +61,3 @@ Manual one-time check:
 npm run check:now
 ```
 
-## Database tables
-
-The app creates its tables automatically on startup.
-
-https://discord.com/oauth2/authorize?client_id=1488582014004236380&permissions=268504064&integration_type=0&scope=applications.commands+bot
