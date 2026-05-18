@@ -22,9 +22,13 @@ export function createLeaderboard(members: DailyCountRow[]): string {
     members
         .slice(0, 3)
         .forEach((member: DailyCountRow, index: number): void => {
+            const tens: number = Math.floor(member.missed_count / 10) * 10;
+            const units: number = member.missed_count % 10;
+
             message +=
                 `${index in medals ? medals[index] : ' '} <@${member.user_id}> ` +
-                Array(member.missed_count).fill('⏰').join(' ') +
+                `${tens > 0 ? `${tens} x ⏰ + ` : ''}` +
+                Array(units).fill('⏰').join(' ') +
                 '\n';
         });
 
@@ -69,6 +73,6 @@ export async function sendStatusMessage(
             createLeaderboard(leaderboard) +
             honorableMention +
             '\n\n' +
-            'Ranko bot v1.2.1, kommandy: `/ranko join` `/ranko leave`',
+            'Ranko bot v1.2.2, kommandy: `/ranko join` `/ranko leave`',
     });
 }
