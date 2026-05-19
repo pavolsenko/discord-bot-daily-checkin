@@ -28,7 +28,7 @@ export function createLeaderboard(members: DailyCountRow[]): string {
             message +=
                 `${index in medals ? medals[index] : ' '} <@${member.user_id}> ` +
                 `${tens > 0 ? `${tens} x ⏰ + ` : ''}` +
-                Array(units).fill('⏰').join(' ') +
+                (units ? Array(units).fill('⏰').join(' ') : '0') +
                 '\n';
         });
 
@@ -73,6 +73,6 @@ export async function sendStatusMessage(
             createLeaderboard(leaderboard) +
             honorableMention +
             '\n\n' +
-            'Ranko bot v1.2.2, kommandy: `/ranko join` `/ranko leave`',
+            'Ranko bot v1.2.3, kommandy: `/ranko join` `/ranko leave`',
     });
 }
