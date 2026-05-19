@@ -73,6 +73,8 @@ export async function sendStatusMessage(
             createLeaderboard(leaderboard) +
             honorableMention +
             '\n\n' +
-            'Ranko bot v1.2.3, kommandy: `/ranko join` `/ranko leave`',
+            'Full leaderboard at https://ranko.webtip.sk' +
+            '\n' +
+            'Ranko bot v1.2.4, kommandy: `/ranko join` `/ranko leave`',
     });
 }
