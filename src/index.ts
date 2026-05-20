@@ -5,6 +5,7 @@ import { loadConfig } from './config';
 import { createPool } from './db';
 import { runDailyCheck } from './checks';
 import { handleRankoCommand } from './commands';
+import { runSeasonEnd } from './season';
 
 async function main(): Promise<void> {
     const config = loadConfig();
@@ -37,6 +38,30 @@ async function main(): Promise<void> {
                 }
             },
             { timezone: config.timezone }
+        );
+
+        cron.schedule(
+            '0 10 31 3,12 *',
+            async () => {
+                try {
+                    await runSeasonEnd(client, pool, config);
+                } catch (error) {
+                    console.error('Season end failed', error);
+                }
+            },
+            { timezone: 'Europe/Vienna' }
+        );
+
+        cron.schedule(
+            '0 10 30 6,9 *',
+            async () => {
+                try {
+                    await runSeasonEnd(client, pool, config);
+                } catch (error) {
+                    console.error('Season end failed', error);
+                }
+            },
+            { timezone: 'Europe/Vienna' }
         );
     });
 

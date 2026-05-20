@@ -1,4 +1,9 @@
-import mysql, { FieldPacket, Pool, RowDataPacket } from 'mysql2/promise';
+import mysql, {
+    FieldPacket,
+    Pool,
+    ResultSetHeader,
+    RowDataPacket,
+} from 'mysql2/promise';
 
 import type { DatabaseConfig } from './config';
 
@@ -225,5 +230,51 @@ export async function logCommand(options: LogCommandOptions): Promise<void> {
             options.commandName,
             options.subcommandName,
         ]
+    );
+}
+
+export async function saveSeasonBadgeStatsSnapshot(
+    pool: Pool,
+    guildId: string,
+    seasonId: number
+): Promise<void> {
+    await pool.execute<ResultSetHeader>(
+        `
+            INSERT INTO season_user_badge_stats (
+                season_id,
+                guild_id,
+                user_id,
+                missed_count
+            )
+            SELECT
+                ? AS season_id,
+                ubs.guild_id,
+                ubs.user_id,
+                ubs.missed_count
+            FROM user_badge_stats ubs
+            INNER JOIN eligible_users eu
+                ON eu.user_id = ubs.user_id
+                AND eu.guild_id = ubs.guild_id
+            WHERE eu.status = 1
+                AND ubs.guild_id = ?
+            ON DUPLICATE KEY UPDATE
+                missed_count = VALUES(missed_count);
+        `,
+        [seasonId, guildId]
+    );
+}
+
+export async function resetUserBadgeStatsForGuild(
+    pool: Pool,
+    guildId: string
+): Promise<void> {
+    await pool.execute<ResultSetHeader>(
+        `
+            UPDATE user_badge_stats
+            SET missed_count = 0,
+                last_missed_at = NULL
+            WHERE guild_id = ?;
+        `,
+        [guildId]
     );
 }
