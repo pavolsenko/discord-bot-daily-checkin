@@ -103,6 +103,22 @@ function getCurrentSeasonNumber(date: Date = new Date()): number {
     return (year - BASE_SEASON_YEAR) * 4 + (quarter - BASE_SEASON_QUARTER);
 }
 
+const seasonNames: string[] = [
+    'Budík Reborn',
+    'Snooze Awakening',
+    'Ranný Debuff',
+    'Budík: Endgame',
+    'Snooze Lord',
+    'Budík Strikes Back',
+    'Ranný Skill Issue',
+    'Snooze Simulator',
+    'Ranko Royale',
+    'Dawn of the Budík',
+    'Attack on Snooze',
+    'Pán Budíkov: Návrat Budíka',
+    'Ranný Nerf',
+];
+
 function getCurrentSeasonEndUnixTimestamp(date: Date = new Date()): number {
     const { year } = getViennaDateParts(date);
 
@@ -216,12 +232,12 @@ export async function sendStatusMessage(
                 value: truncateDiscordEmbedField(honorableMention),
             },
             {
-                name: `Sezóna ${seasonNumber}`,
+                name: `Sezóna ${seasonNumber} (${seasonNames[seasonNumber]})`,
                 value: `končí <t:${seasonEndTimestamp}:R>`,
             }
         )
         .setFooter({
-            text: 'Ranko bot v2.0.0 • /ranko join • /ranko leave',
+            text: 'Ranko bot v2.0.1 • /ranko join • /ranko leave',
         });
 
     const buttons: ActionRowBuilder<ButtonBuilder> =
