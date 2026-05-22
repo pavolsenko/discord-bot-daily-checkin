@@ -237,7 +237,7 @@ export async function sendStatusMessage(
             }
         )
         .setFooter({
-            text: 'Ranko bot v2.0.1 • /ranko join • /ranko leave',
+            text: 'Ranko bot v2.0.2 • /ranko join • /ranko leave',
         });
 
     const buttons: ActionRowBuilder<ButtonBuilder> =

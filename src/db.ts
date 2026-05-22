@@ -94,11 +94,11 @@ export async function getDailyCount(
         `
             SELECT ubs.user_id, ubs.missed_count
             FROM user_badge_stats ubs
-                INNER JOIN eligible_users eu
-                    ON eu.user_id = ubs.user_id
-                    AND eu.guild_id = ubs.guild_id
+                     INNER JOIN eligible_users eu
+                                ON eu.user_id = ubs.user_id
+                                    AND eu.guild_id = ubs.guild_id
             WHERE eu.status = 1
-            ORDER BY ubs.missed_count DESC;
+            ORDER BY ubs.missed_count DESC, RAND();
         `
     );
 }
