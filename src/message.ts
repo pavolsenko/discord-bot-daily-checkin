@@ -9,7 +9,7 @@ import {
 import { DailyCountRow } from './db';
 
 const BASE_SEASON_YEAR = 2026;
-const BASE_SEASON_QUARTER = 2;
+const BASE_SEASON_MONTH = 6;
 const DISCORD_EMBED_FIELD_LIMIT = 1024;
 
 export function getRandomGreeting(): string {
@@ -64,43 +64,16 @@ function getViennaDateParts(date: Date): { year: number; month: number } {
     };
 }
 
-function getQuarterFromMonth(month: number): number {
-    if (month >= 1 && month <= 3) {
-        return 1;
-    }
+function getMonthEndUtcDate(year: number, month: number): Date {
+    const viennaSeasonEndHourUtc: number = month >= 3 && month <= 10 ? 8 : 9;
 
-    if (month >= 4 && month <= 6) {
-        return 2;
-    }
-
-    if (month >= 7 && month <= 9) {
-        return 3;
-    }
-
-    return 4;
-}
-
-function getQuarterEndUtcDate(year: number, quarter: number): Date {
-    if (quarter === 1) {
-        return new Date(Date.UTC(year, 2, 31, 8, 0, 0));
-    }
-
-    if (quarter === 2) {
-        return new Date(Date.UTC(year, 5, 30, 8, 0, 0));
-    }
-
-    if (quarter === 3) {
-        return new Date(Date.UTC(year, 8, 30, 8, 0, 0));
-    }
-
-    return new Date(Date.UTC(year, 11, 31, 9, 0, 0));
+    return new Date(Date.UTC(year, month, 0, viennaSeasonEndHourUtc, 0, 0));
 }
 
 function getCurrentSeasonNumber(date: Date = new Date()): number {
     const { year, month } = getViennaDateParts(date);
-    const quarter: number = getQuarterFromMonth(month);
 
-    return (year - BASE_SEASON_YEAR) * 4 + (quarter - BASE_SEASON_QUARTER);
+    return (year - BASE_SEASON_YEAR) * 12 + (month - BASE_SEASON_MONTH);
 }
 
 const seasonNames: string[] = [
@@ -120,25 +93,22 @@ const seasonNames: string[] = [
 ];
 
 function getCurrentSeasonEndUnixTimestamp(date: Date = new Date()): number {
-    const { year } = getViennaDateParts(date);
+    const { year, month } = getViennaDateParts(date);
+    const currentMonthEnd: Date = getMonthEndUtcDate(year, month);
 
-    const seasonEnds: Date[] = [
-        getQuarterEndUtcDate(year, 1),
-        getQuarterEndUtcDate(year, 2),
-        getQuarterEndUtcDate(year, 3),
-        getQuarterEndUtcDate(year, 4),
-        getQuarterEndUtcDate(year + 1, 1),
-    ];
-
-    const currentSeasonEnd: Date | undefined = seasonEnds.find(
-        (seasonEnd: Date): boolean => seasonEnd.getTime() > date.getTime()
-    );
-
-    if (!currentSeasonEnd) {
-        throw new Error('Could not determine current season end');
+    if (currentMonthEnd.getTime() > date.getTime()) {
+        return Math.floor(currentMonthEnd.getTime() / 1000);
     }
 
-    return Math.floor(currentSeasonEnd.getTime() / 1000);
+    const nextMonthDate: Date = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+    const nextMonthParts: { year: number; month: number } =
+        getViennaDateParts(nextMonthDate);
+    const nextMonthEnd: Date = getMonthEndUtcDate(
+        nextMonthParts.year,
+        nextMonthParts.month
+    );
+
+    return Math.floor(nextMonthEnd.getTime() / 1000);
 }
 
 function truncateDiscordEmbedField(value: string): string {
@@ -202,6 +172,7 @@ export async function sendStatusMessage(
 
     const seasonEndTimestamp: number = getCurrentSeasonEndUnixTimestamp();
     const seasonNumber: number = getCurrentSeasonNumber();
+    const seasonName: string = seasonNames[seasonNumber] || 'Bonus Season';
     const currentTimestamp: number = Math.floor(Date.now() / 1000);
 
     const embedColor: number =
@@ -232,12 +203,12 @@ export async function sendStatusMessage(
                 value: truncateDiscordEmbedField(honorableMention),
             },
             {
-                name: `Sezóna ${seasonNumber} (${seasonNames[seasonNumber]})`,
+                name: `Sezóna ${seasonNumber} (${seasonName})`,
                 value: `končí <t:${seasonEndTimestamp}:R>`,
             }
         )
         .setFooter({
-            text: 'Ranko bot v2.0.2 • /ranko join • /ranko leave',
+            text: 'Ranko bot v2.1.0 • /ranko join • /ranko leave',
         });
 
     const buttons: ActionRowBuilder<ButtonBuilder> =

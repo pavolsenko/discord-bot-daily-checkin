@@ -41,19 +41,7 @@ async function main(): Promise<void> {
         );
 
         cron.schedule(
-            '0 10 31 3,12 *',
-            async () => {
-                try {
-                    await runSeasonEnd(client, pool, config);
-                } catch (error) {
-                    console.error('Season end failed', error);
-                }
-            },
-            { timezone: 'Europe/Vienna' }
-        );
-
-        cron.schedule(
-            '0 10 30 6,9 *',
+            '0 10 1 * *',
             async () => {
                 try {
                     await runSeasonEnd(client, pool, config);
