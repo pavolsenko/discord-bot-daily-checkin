@@ -6,7 +6,7 @@ import {
     EmbedBuilder,
     GuildTextBasedChannel,
 } from 'discord.js';
-import { DailyCountRow } from './db';
+import { DailyCountRow, LongestCheckStreakRow } from './db';
 
 const BASE_SEASON_YEAR = 2026;
 const BASE_SEASON_MONTH = 6;
@@ -143,12 +143,12 @@ export function createLeaderboard(members: DailyCountRow[]): string {
 
     return message;
 }
-
 export async function sendStatusMessage(
     channel: Channel | null,
     missedUserIds: string[],
     leaderboard: DailyCountRow[],
-    honorableStats: { userId: string; missedCount: number } | null
+    honorableStats: { userId: string; missedCount: number } | null,
+    longestCheckStreak: LongestCheckStreakRow | null
 ): Promise<void> {
     if (!channel || !channel.isTextBased()) {
         throw new Error('Configured channel is not a text-based guild channel');
@@ -168,6 +168,10 @@ export async function sendStatusMessage(
 
     const honorableMention: string = honorableStats
         ? `<@${honorableStats.userId}> ${honorableStats.missedCount} ⏰`
+        : '--';
+
+    const longestCheckStreakMention: string = longestCheckStreak
+        ? `<@${longestCheckStreak.user_id}> ${longestCheckStreak.longest_missed_streak} dní`
         : '--';
 
     const seasonEndTimestamp: number = getCurrentSeasonEndUnixTimestamp();
@@ -203,12 +207,16 @@ export async function sendStatusMessage(
                 value: truncateDiscordEmbedField(honorableMention),
             },
             {
+                name: 'Longest streak',
+                value: truncateDiscordEmbedField(longestCheckStreakMention),
+            },
+            {
                 name: `Sezóna ${seasonNumber} (${seasonName})`,
                 value: `končí <t:${seasonEndTimestamp}:R>`,
             }
         )
         .setFooter({
-            text: 'Ranko bot v2.1.0 • /ranko join • /ranko leave',
+            text: 'Ranko bot v2.2.1 • /ranko join • /ranko leave',
         });
 
     const buttons: ActionRowBuilder<ButtonBuilder> =

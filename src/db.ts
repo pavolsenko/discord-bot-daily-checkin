@@ -278,3 +278,101 @@ export async function resetUserBadgeStatsForGuild(
         [guildId]
     );
 }
+
+export interface LongestCheckStreakRow extends RowDataPacket {
+    user_id: string;
+    longest_missed_streak: number;
+}
+export async function getUserWithLongestCheckStreak(
+    pool: Pool,
+    guildId: string
+): Promise<LongestCheckStreakRow | null> {
+    const [rows] = await pool.execute<LongestCheckStreakRow[]>(
+        `
+            WITH RECURSIVE date_range AS (
+                SELECT CAST(DATE_FORMAT(CURRENT_DATE, '%Y-%m-01') AS DATE) AS check_date
+
+                UNION ALL
+
+                SELECT DATE_ADD(check_date, INTERVAL 1 DAY)
+                FROM date_range
+                WHERE check_date < CURRENT_DATE
+            ),
+
+                           eligible AS (
+                               SELECT
+                                   eu.user_id
+                               FROM eligible_users eu
+                               WHERE eu.guild_id = ?
+                                 AND eu.status = 1
+                           ),
+
+                           checked_days AS (
+                               SELECT DISTINCT
+                                   dcr.user_id,
+                DATE(dcr.check_date) AS check_date
+            FROM daily_check_results dcr
+            WHERE dcr.guild_id = ?
+              AND dcr.posted = 1
+              AND DATE(dcr.check_date) BETWEEN CAST(DATE_FORMAT(CURRENT_DATE, '%Y-%m-01') AS DATE)
+              AND CURRENT_DATE
+                ),
+
+                missed_days AS (
+            SELECT
+                eligible.user_id,
+                date_range.check_date
+            FROM eligible
+                CROSS JOIN date_range
+                LEFT JOIN checked_days
+            ON checked_days.user_id = eligible.user_id
+                AND checked_days.check_date = date_range.check_date
+            WHERE checked_days.user_id IS NULL
+                ),
+
+                numbered_days AS (
+            SELECT
+                user_id,
+                check_date,
+                DATE_SUB(
+                check_date,
+                INTERVAL ROW_NUMBER() OVER (
+                PARTITION BY user_id
+                ORDER BY check_date
+                ) DAY
+                ) AS streak_group
+            FROM missed_days
+                ),
+
+                streaks AS (
+            SELECT
+                user_id,
+                COUNT(*) AS streak_length
+            FROM numbered_days
+            GROUP BY user_id, streak_group
+                ),
+
+                max_streaks AS (
+            SELECT
+                user_id,
+                MAX(streak_length) AS longest_missed_streak
+            FROM streaks
+            GROUP BY user_id
+                )
+
+            SELECT
+                user_id,
+                longest_missed_streak
+            FROM max_streaks
+            ORDER BY longest_missed_streak DESC, RAND()
+                LIMIT 1;
+        `,
+        [guildId, guildId]
+    );
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return rows[0];
+}

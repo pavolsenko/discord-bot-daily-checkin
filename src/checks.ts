@@ -16,6 +16,7 @@ import {
     getActiveEligibleUsers,
     getRandomInactiveUser,
     getUserStats,
+    getUserWithLongestCheckStreak,
 } from './db';
 import { sendStatusMessage } from './message';
 
@@ -164,10 +165,17 @@ export async function runDailyCheck(
             missedCount: stats ? stats.missed_count : 0,
         };
     }
+
+    const longestStreak = await getUserWithLongestCheckStreak(
+        pool,
+        config.guildId
+    );
+
     await sendStatusMessage(
         channel,
         missedUserIds,
         leaderboard,
-        honorableStats
+        honorableStats,
+        longestStreak
     );
 }
