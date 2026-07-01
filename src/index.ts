@@ -41,7 +41,7 @@ async function main(): Promise<void> {
         );
 
         cron.schedule(
-            '0 10 1 * *',
+            '0 8 1 * *',
             async () => {
                 try {
                     await runSeasonEnd(client, pool, config);
