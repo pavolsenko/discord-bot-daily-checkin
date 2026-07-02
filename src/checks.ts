@@ -17,6 +17,7 @@ import {
     getRandomInactiveUser,
     getUserStats,
     getUserWithLongestCheckStreak,
+    getPreviousSeasonTopUser,
 } from './db';
 import { sendStatusMessage } from './message';
 
@@ -171,11 +172,17 @@ export async function runDailyCheck(
         config.guildId
     );
 
+    const previousSeasonWinner = await getPreviousSeasonTopUser(
+        pool,
+        config.guildId
+    );
+
     await sendStatusMessage(
         channel,
         missedUserIds,
         leaderboard,
         honorableStats,
-        longestStreak
+        longestStreak,
+        previousSeasonWinner
     );
 }

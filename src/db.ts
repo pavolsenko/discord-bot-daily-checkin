@@ -376,3 +376,36 @@ export async function getUserWithLongestCheckStreak(
 
     return rows[0];
 }
+
+export interface PreviousSeasonTopRow extends RowDataPacket {
+    user_id: string;
+    missed_count: number;
+}
+
+export async function getPreviousSeasonTopUser(
+    pool: Pool,
+    guildId: string
+): Promise<PreviousSeasonTopRow | null> {
+    const [rows] = await pool.execute<PreviousSeasonTopRow[]>(
+        `
+        SELECT user_id, missed_count
+        FROM season_user_badge_stats
+        WHERE guild_id = ?
+          AND season_id = (
+              SELECT MAX(season_id)
+              FROM season_user_badge_stats
+              WHERE guild_id = ?
+                AND season_id < (
+                    SELECT MAX(season_id)
+                    FROM season_user_badge_stats
+                    WHERE guild_id = ?
+                )
+          )
+        ORDER BY missed_count DESC, RAND()
+        LIMIT 1;
+        `,
+        [guildId, guildId, guildId]
+    );
+
+    return rows.length ? rows[0] : null;
+}

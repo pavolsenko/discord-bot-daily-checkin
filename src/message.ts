@@ -6,7 +6,11 @@ import {
     EmbedBuilder,
     GuildTextBasedChannel,
 } from 'discord.js';
-import { DailyCountRow, LongestCheckStreakRow } from './db';
+import {
+    DailyCountRow,
+    LongestCheckStreakRow,
+    PreviousSeasonTopRow,
+} from './db';
 
 const BASE_SEASON_YEAR = 2026;
 const BASE_SEASON_MONTH = 6;
@@ -148,7 +152,8 @@ export async function sendStatusMessage(
     missedUserIds: string[],
     leaderboard: DailyCountRow[],
     honorableStats: { userId: string; missedCount: number } | null,
-    longestCheckStreak: LongestCheckStreakRow | null
+    longestCheckStreak: LongestCheckStreakRow | null,
+    previousSeasonWinner: PreviousSeasonTopRow | null
 ): Promise<void> {
     if (!channel || !channel.isTextBased()) {
         throw new Error('Configured channel is not a text-based guild channel');
@@ -167,12 +172,20 @@ export async function sendStatusMessage(
         .join(', ');
 
     const honorableMention: string = honorableStats
-        ? `<@${honorableStats.userId}> ${honorableStats.missedCount} ⏰`
+        ? `<@${honorableStats.userId}> ${honorableStats.missedCount ? honorableStats.missedCount + '⏰' : ''}`
         : '--';
 
-    const longestCheckStreakMention: string = longestCheckStreak
-        ? `<@${longestCheckStreak.user_id}> ${longestCheckStreak.longest_missed_streak} dní`
+    let longestCheckStreakMention: string = longestCheckStreak
+        ? longestCheckStreak.length + ' dní'
         : '--';
+    if (longestCheckStreak?.length === 1) {
+        longestCheckStreakMention = '1 deň';
+    } else if (
+        longestCheckStreak?.length > 1 &&
+        longestCheckStreak?.length < 5
+    ) {
+        longestCheckStreakMention = longestCheckStreak?.length + ' dni';
+    }
 
     const seasonEndTimestamp: number = getCurrentSeasonEndUnixTimestamp();
     const seasonNumber: number = getCurrentSeasonNumber();
@@ -213,10 +226,16 @@ export async function sendStatusMessage(
             {
                 name: `Sezóna ${seasonNumber} (${seasonName})`,
                 value: `končí <t:${seasonEndTimestamp}:R>`,
+            },
+            {
+                name: 'Víťaz minulej sezóny',
+                value: previousSeasonWinner
+                    ? `<@${previousSeasonWinner?.user_id}> ${previousSeasonWinner?.missed_count} ⏰`
+                    : '--',
             }
         )
         .setFooter({
-            text: 'Ranko bot v2.2.2 • /ranko join • /ranko leave',
+            text: 'Ranko bot v2.3.0 • /ranko join • /ranko leave',
         });
 
     const buttons: ActionRowBuilder<ButtonBuilder> =
