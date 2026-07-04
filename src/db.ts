@@ -284,8 +284,7 @@ export interface LongestCheckStreakRow extends RowDataPacket {
     longest_missed_streak: number;
 }
 export async function getUserWithLongestCheckStreak(
-    pool: Pool,
-    guildId: string
+    pool: Pool
 ): Promise<LongestCheckStreakRow | null> {
     const [rows] = await pool.execute<LongestCheckStreakRow[]>(
         `
@@ -303,8 +302,7 @@ export async function getUserWithLongestCheckStreak(
                                SELECT
                                    eu.user_id
                                FROM eligible_users eu
-                               WHERE eu.guild_id = ?
-                                 AND eu.status = 1
+                               WHERE eu.status = 1
                            ),
 
                            checked_days AS (
@@ -312,8 +310,7 @@ export async function getUserWithLongestCheckStreak(
                                    dcr.user_id,
                 DATE(dcr.check_date) AS check_date
             FROM daily_check_results dcr
-            WHERE dcr.guild_id = ?
-              AND dcr.posted = 1
+            WHERE dcr.posted = 1
               AND DATE(dcr.check_date) BETWEEN CAST(DATE_FORMAT(CURRENT_DATE, '%Y-%m-01') AS DATE)
               AND CURRENT_DATE
                 ),
@@ -366,8 +363,7 @@ export async function getUserWithLongestCheckStreak(
             FROM max_streaks
             ORDER BY longest_missed_streak DESC, RAND()
                 LIMIT 1;
-        `,
-        [guildId, guildId]
+        `
     );
 
     if (rows.length === 0) {
@@ -383,28 +379,23 @@ export interface PreviousSeasonTopRow extends RowDataPacket {
 }
 
 export async function getPreviousSeasonTopUser(
-    pool: Pool,
-    guildId: string
+    pool: Pool
 ): Promise<PreviousSeasonTopRow | null> {
     const [rows] = await pool.execute<PreviousSeasonTopRow[]>(
         `
         SELECT user_id, missed_count
         FROM season_user_badge_stats
-        WHERE guild_id = ?
-          AND season_id = (
+          WHERE season_id = (
               SELECT MAX(season_id)
               FROM season_user_badge_stats
-              WHERE guild_id = ?
-                AND season_id < (
+                WHERE season_id <= (
                     SELECT MAX(season_id)
                     FROM season_user_badge_stats
-                    WHERE guild_id = ?
                 )
           )
         ORDER BY missed_count DESC, RAND()
         LIMIT 1;
-        `,
-        [guildId, guildId, guildId]
+        `
     );
 
     return rows.length ? rows[0] : null;

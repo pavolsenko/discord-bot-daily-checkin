@@ -176,15 +176,21 @@ export async function sendStatusMessage(
         : '--';
 
     let longestCheckStreakMention: string = longestCheckStreak
-        ? longestCheckStreak.length + ' dní'
+        ? `<@${longestCheckStreak.user_id}> ${longestCheckStreak.longest_missed_streak}` +
+          ' dní'
         : '--';
-    if (longestCheckStreak?.length === 1) {
-        longestCheckStreakMention = '1 deň';
+    if (longestCheckStreak?.longest_missed_streak === 1) {
+        longestCheckStreakMention =
+            `<@${longestCheckStreak.user_id}>` + ' 1 deň';
     } else if (
-        longestCheckStreak?.length > 1 &&
-        longestCheckStreak?.length < 5
+        longestCheckStreak &&
+        longestCheckStreak.longest_missed_streak > 1 &&
+        longestCheckStreak.longest_missed_streak < 5
     ) {
-        longestCheckStreakMention = longestCheckStreak?.length + ' dni';
+        longestCheckStreakMention = longestCheckStreak
+            ? `<@${longestCheckStreak.user_id}> ${longestCheckStreak.longest_missed_streak}` +
+              ' dni'
+            : '--';
     }
 
     const seasonEndTimestamp: number = getCurrentSeasonEndUnixTimestamp();
@@ -235,7 +241,7 @@ export async function sendStatusMessage(
             }
         )
         .setFooter({
-            text: 'Ranko bot v2.3.0 • /ranko join • /ranko leave',
+            text: 'Ranko bot v2.4.1 • /ranko join • /ranko leave',
         });
 
     const buttons: ActionRowBuilder<ButtonBuilder> =

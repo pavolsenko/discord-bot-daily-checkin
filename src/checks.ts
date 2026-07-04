@@ -167,15 +167,9 @@ export async function runDailyCheck(
         };
     }
 
-    const longestStreak = await getUserWithLongestCheckStreak(
-        pool,
-        config.guildId
-    );
+    const longestStreak = await getUserWithLongestCheckStreak(pool);
 
-    const previousSeasonWinner = await getPreviousSeasonTopUser(
-        pool,
-        config.guildId
-    );
+    const previousSeasonWinner = await getPreviousSeasonTopUser(pool);
 
     await sendStatusMessage(
         channel,
