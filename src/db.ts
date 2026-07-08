@@ -383,18 +383,14 @@ export async function getPreviousSeasonTopUser(
 ): Promise<PreviousSeasonTopRow | null> {
     const [rows] = await pool.execute<PreviousSeasonTopRow[]>(
         `
-        SELECT user_id, missed_count
-        FROM season_user_badge_stats
-          WHERE season_id = (
-              SELECT MAX(season_id)
-              FROM season_user_badge_stats
-                WHERE season_id <= (
-                    SELECT MAX(season_id)
-                    FROM season_user_badge_stats
-                )
-          )
-        ORDER BY missed_count DESC, RAND()
-        LIMIT 1;
+            SELECT user_id, missed_count
+            FROM season_user_badge_stats
+            WHERE season_id = (
+                SELECT MAX(season_id)
+                FROM season_user_badge_stats
+            )
+            ORDER BY missed_count DESC, RAND()
+                LIMIT 1;
         `
     );
 
