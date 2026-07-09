@@ -51,6 +51,14 @@ async function main(): Promise<void> {
             },
             { timezone: 'Europe/Vienna' }
         );
+
+        cron.schedule('*/5 * * * *', async () => {
+            try {
+                await pool.execute('INSERT INTO bot_heartbeat () VALUES ()');
+            } catch (error) {
+                console.error('Heartbeat logging failed', error);
+            }
+        });
     });
 
     client.on('error', (error) => {
