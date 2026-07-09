@@ -241,7 +241,7 @@ export async function sendStatusMessage(
             }
         )
         .setFooter({
-            text: 'Ranko bot v2.5.0 • /ranko join • /ranko leave',
+            text: 'Ranko bot v2.5.1 • /ranko join • /ranko leave',
         });
 
     const buttons: ActionRowBuilder<ButtonBuilder> =
@@ -253,7 +253,11 @@ export async function sendStatusMessage(
             new ButtonBuilder()
                 .setLabel('Kúpiť Battle Pass')
                 .setStyle(ButtonStyle.Link)
-                .setURL('https://ranko.webtip.sk#buy')
+                .setURL('https://ranko.webtip.sk#buy'),
+            new ButtonBuilder()
+                .setLabel('Bot status')
+                .setStyle(ButtonStyle.Link)
+                .setURL('https://ranko.webtip.sk/status.php')
         );
 
     await (channel as GuildTextBasedChannel).send({
