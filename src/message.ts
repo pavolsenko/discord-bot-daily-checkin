@@ -10,6 +10,7 @@ import {
     DailyCountRow,
     LongestCheckStreakRow,
     PreviousSeasonTopRow,
+    ZeroBadgeStatsRow,
 } from './db';
 
 const BASE_SEASON_YEAR = 2026;
@@ -153,7 +154,8 @@ export async function sendStatusMessage(
     leaderboard: DailyCountRow[],
     honorableStats: { userId: string; missedCount: number } | null,
     longestCheckStreak: LongestCheckStreakRow | null,
-    previousSeasonWinner: PreviousSeasonTopRow | null
+    previousSeasonWinner: PreviousSeasonTopRow | null,
+    userZeroStats: ZeroBadgeStatsRow[] | null
 ): Promise<void> {
     if (!channel || !channel.isTextBased()) {
         throw new Error('Configured channel is not a text-based guild channel');
@@ -193,6 +195,15 @@ export async function sendStatusMessage(
             : '--';
     }
 
+    const zeroStats =
+        userZeroStats && userZeroStats.length > 0
+            ? userZeroStats
+                  .map(
+                      (user: ZeroBadgeStatsRow): string => `<@${user.user_id}>`
+                  )
+                  .join(', ')
+            : 'nikto';
+
     const seasonEndTimestamp: number = getCurrentSeasonEndUnixTimestamp();
     const seasonNumber: number = getCurrentSeasonNumber();
     const seasonName: string = seasonNames[seasonNumber] || 'Bonus Season';
@@ -230,6 +241,10 @@ export async function sendStatusMessage(
                 value: truncateDiscordEmbedField(longestCheckStreakMention),
             },
             {
+                name: 'Čistý štít',
+                value: truncateDiscordEmbedField(zeroStats),
+            },
+            {
                 name: `Sezóna ${seasonNumber} (${seasonName})`,
                 value: `končí <t:${seasonEndTimestamp}:R>`,
             },
@@ -241,7 +256,7 @@ export async function sendStatusMessage(
             }
         )
         .setFooter({
-            text: 'Ranko bot v2.5.1 • /ranko join • /ranko leave',
+            text: 'Ranko bot v2.6.0 • /ranko join • /ranko leave',
         });
 
     const buttons: ActionRowBuilder<ButtonBuilder> =

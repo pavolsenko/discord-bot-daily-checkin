@@ -18,6 +18,7 @@ import {
     getUserStats,
     getUserWithLongestCheckStreak,
     getPreviousSeasonTopUser,
+    getUsersWithZeroBadgeStats,
 } from './db';
 import { sendStatusMessage } from './message';
 
@@ -168,8 +169,8 @@ export async function runDailyCheck(
     }
 
     const longestStreak = await getUserWithLongestCheckStreak(pool);
-
     const previousSeasonWinner = await getPreviousSeasonTopUser(pool);
+    const zeroStats = await getUsersWithZeroBadgeStats(pool);
 
     await sendStatusMessage(
         channel,
@@ -177,6 +178,7 @@ export async function runDailyCheck(
         leaderboard,
         honorableStats,
         longestStreak,
-        previousSeasonWinner
+        previousSeasonWinner,
+        zeroStats
     );
 }

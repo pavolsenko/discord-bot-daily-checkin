@@ -396,3 +396,28 @@ export async function getPreviousSeasonTopUser(
 
     return rows.length ? rows[0] : null;
 }
+
+export interface ZeroBadgeStatsRow extends RowDataPacket {
+    user_id: string;
+    missed_count: number;
+}
+
+export async function getUsersWithZeroBadgeStats(
+    pool: Pool
+): Promise<ZeroBadgeStatsRow[]> {
+    const [rows] = await pool.execute<ZeroBadgeStatsRow[]>(
+        `
+            SELECT
+                eu.user_id,
+                COALESCE(ubs.missed_count, 0) AS missed_count
+            FROM eligible_users eu
+            LEFT JOIN user_badge_stats ubs
+                ON ubs.guild_id = eu.guild_id
+               AND ubs.user_id = eu.user_id
+            WHERE eu.status = 1
+              AND COALESCE(ubs.missed_count, 0) = 0;
+        `
+    );
+
+    return rows;
+}
