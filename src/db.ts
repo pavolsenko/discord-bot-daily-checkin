@@ -17,6 +17,8 @@ export function createPool(config: DatabaseConfig): Pool {
         connectionLimit: config.connectionLimit,
         waitForConnections: true,
         namedPlaceholders: true,
+        supportBigNumbers: true,
+        bigNumberStrings: true,
     });
 }
 

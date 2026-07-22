@@ -251,12 +251,12 @@ export async function sendStatusMessage(
             {
                 name: 'Víťaz minulej sezóny',
                 value: previousSeasonWinner
-                    ? `<@${previousSeasonWinner?.user_id}> ${previousSeasonWinner?.missed_count} ⏰`
+                    ? `<@${previousSeasonWinner.user_id}> ${previousSeasonWinner.missed_count} ⏰`
                     : '--',
             }
         )
         .setFooter({
-            text: 'Ranko bot v2.6.0 • /ranko join • /ranko leave',
+            text: 'Ranko bot v2.6.1 • /ranko join • /ranko leave',
         });
 
     const buttons: ActionRowBuilder<ButtonBuilder> =
