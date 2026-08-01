@@ -177,10 +177,11 @@ export async function sendStatusMessage(
         ? `<@${honorableStats.userId}> ${honorableStats.missedCount ? honorableStats.missedCount + '⏰' : ''}`
         : '--';
 
-    let longestCheckStreakMention: string = longestCheckStreak
-        ? `<@${longestCheckStreak.user_id}> ${longestCheckStreak.longest_missed_streak}` +
-          ' dní'
-        : '--';
+    let longestCheckStreakMention: string =
+        longestCheckStreak && longestCheckStreak.longest_missed_streak >= 5
+            ? `<@${longestCheckStreak.user_id}> ${longestCheckStreak.longest_missed_streak}` +
+              ' dní'
+            : '--';
     if (longestCheckStreak?.longest_missed_streak === 1) {
         longestCheckStreakMention =
             `<@${longestCheckStreak.user_id}>` + ' 1 deň';
@@ -256,7 +257,7 @@ export async function sendStatusMessage(
             }
         )
         .setFooter({
-            text: 'Ranko bot v2.6.1 • /ranko join • /ranko leave',
+            text: 'Ranko bot v2.6.2 • /ranko join • /ranko leave',
         });
 
     const buttons: ActionRowBuilder<ButtonBuilder> =
